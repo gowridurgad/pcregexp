@@ -57,21 +57,21 @@ func main() {
 ## Benchmark
 
 ```console
-$ go test -run - -benchmem -bench .
+$ go test -run - -bench=. -benchmem
 goos: linux
 goarch: amd64
 pkg: github.com/dwisiswant0/pcregexp
 cpu: 11th Gen Intel(R) Core(TM) i9-11900H @ 2.50GHz
-BenchmarkCompile/impl=pcregexp-16         	  438366	      2526 ns/op	     712 B/op	      14 allocs/op
-BenchmarkCompile/impl=stdlib-16           	  310640	      3943 ns/op	    3272 B/op	      33 allocs/op
-BenchmarkMatchString/impl=pcregexp-16     	  556179	      2036 ns/op	     792 B/op	      17 allocs/op
-BenchmarkMatchString/impl=stdlib-16       	 6375502	       189.2 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFindString/impl=pcregexp-16      	  532773	      2103 ns/op	     792 B/op	      17 allocs/op
-BenchmarkFindString/impl=stdlib-16        	 5678728	       201.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkReplaceAllString/impl=pcregexp-16         	  186987	      6687 ns/op	    2376 B/op	      52 allocs/op
-BenchmarkReplaceAllString/impl=stdlib-16           	 1000000	      1055 ns/op	      96 B/op	       5 allocs/op
+BenchmarkCompile/impl=pcregexp-16         	  816678	      1530 ns/op	     728 B/op	      13 allocs/op
+BenchmarkCompile/impl=stdlib-16           	  534636	      2201 ns/op	    3272 B/op	      33 allocs/op
+BenchmarkMatchString/impl=pcregexp-16     	  979143	      1070 ns/op	     736 B/op	      15 allocs/op
+BenchmarkMatchString/impl=stdlib-16       	10747933	       150.1 ns/op	       0 B/op	       0 allocs/op
+BenchmarkFindString/impl=pcregexp-16      	 1128944	      1168 ns/op	     736 B/op	      15 allocs/op
+BenchmarkFindString/impl=stdlib-16        	10892875	       171.6 ns/op	       0 B/op	       0 allocs/op
+BenchmarkReplaceAllString/impl=pcregexp-16         	  310188	      3455 ns/op	    2232 B/op	      46 allocs/op
+BenchmarkReplaceAllString/impl=stdlib-16           	 1949434	       658.9 ns/op	      96 B/op	       5 allocs/op
 PASS
-ok  	github.com/dwisiswant0/pcregexp	9.855s
+ok  	github.com/dwisiswant0/pcregexp	13.346s
 ```
 
 ## TODO
