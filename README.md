@@ -71,7 +71,12 @@ make bench
   * Use native PCRE2 API JIT functions for improved performance
   * Add JIT compilation options and configurations
   * Implement memory management for JIT-compiled patterns
-* [ ] Update `(*PCREgexp).NumSubexp` method to correctly return the number of subexpressions.
+* [ ] Implement these methods:
+  * [ ] `NumSubexp`
+  * [ ] `LiteralPrefix`
+  * [ ] `Longest`
+  * [ ] `SubexpNames`
+  * [ ] `SubexpIndex`
 
 ## Status
 
