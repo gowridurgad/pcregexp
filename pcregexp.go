@@ -307,10 +307,9 @@ func (re *PCREgexp) ReplaceAll(src, repl []byte) []byte {
 
 // NumSubexp returns the number of parenthesized subexpressions in this regexp.
 //
-// TODO(dwisiswant0): Update NumSubexp to correctly return the number of
-// subexpressions.
+// TODO(dwisiswant0): Implement this method.
 func (re *PCREgexp) NumSubexp() int {
-	// TODO: Implement this method.
+	// TODO(dwisiswant0): Implement this method.
 	return 0
 }
 
@@ -492,4 +491,357 @@ func (re *PCREgexp) Split(s string, n int) []string {
 		}
 	}
 	return parts
+}
+
+// FindAll returns a slice of all successive matches of the regexp in b.
+func (re *PCREgexp) FindAll(b []byte, n int) [][]byte {
+	if n == 0 {
+		return nil
+	}
+
+	var matches [][]byte
+	remaining := b
+
+	for n != 0 {
+		indexes := re.match(remaining)
+		if indexes == nil || len(indexes) < 2 {
+			break
+		}
+
+		match := make([]byte, indexes[1]-indexes[0])
+		copy(match, remaining[indexes[0]:indexes[1]])
+		matches = append(matches, match)
+
+		if indexes[0] == indexes[1] {
+			if indexes[1] >= len(remaining) {
+				break
+			}
+			_, size := utf8.DecodeRune(remaining[indexes[1]:])
+			remaining = remaining[indexes[1]+size:]
+		} else {
+			remaining = remaining[indexes[1]:]
+		}
+
+		n--
+	}
+
+	return matches
+}
+
+// FindAllIndex returns a slice of index pairs identifying successive matches of
+// the regexp in b.
+func (re *PCREgexp) FindAllIndex(b []byte, n int) [][]int {
+	if n == 0 {
+		return nil
+	}
+
+	var results [][]int
+	remaining := b
+	offset := 0
+
+	for n != 0 {
+		indexes := re.match(remaining)
+		if indexes == nil || len(indexes) < 2 {
+			break
+		}
+
+		adjIndexes := make([]int, 2)
+		adjIndexes[0] = indexes[0] + offset
+		adjIndexes[1] = indexes[1] + offset
+		results = append(results, adjIndexes)
+
+		if indexes[0] == indexes[1] {
+			if indexes[1] >= len(remaining) {
+				break
+			}
+			_, size := utf8.DecodeRune(remaining[indexes[1]:])
+			remaining = remaining[indexes[1]+size:]
+			offset += indexes[1] + size
+		} else {
+			remaining = remaining[indexes[1]:]
+			offset += indexes[1]
+		}
+
+		n--
+	}
+
+	return results
+}
+
+// ReplaceAllLiteral returns a copy of src, replacing matches of the regexp with
+// repl.
+func (re *PCREgexp) ReplaceAllLiteral(src, repl []byte) []byte {
+	return re.ReplaceAll(src, repl)
+}
+
+// ReplaceAllLiteralString returns a copy of src, replacing matches of the
+// regexp with repl.
+func (re *PCREgexp) ReplaceAllLiteralString(src, repl string) string {
+	return re.ReplaceAllString(src, repl)
+}
+
+// ReplaceAllStringFunc returns a copy of src in which all matches of the regexp
+// have been replaced by the return value of function repl applied to the
+// matched text.
+func (re *PCREgexp) ReplaceAllStringFunc(src string, repl func(string) string) string {
+	var b strings.Builder
+	remaining := src
+	lastMatchEnd := 0
+
+	for {
+		indexes := re.match(stringToBytesUnsafe(remaining))
+		if indexes == nil || len(indexes) < 2 {
+			b.WriteString(remaining[lastMatchEnd:])
+			break
+		}
+
+		b.WriteString(remaining[:indexes[0]])
+		match := remaining[indexes[0]:indexes[1]]
+		b.WriteString(repl(match))
+
+		if indexes[0] == indexes[1] {
+			if indexes[1] >= len(remaining) {
+				break
+			}
+			r, size := utf8.DecodeRuneInString(remaining[indexes[1]:])
+			if r == utf8.RuneError {
+				b.WriteString(remaining[indexes[1]:])
+				break
+			}
+			b.WriteString(remaining[indexes[1] : indexes[1]+size])
+			remaining = remaining[indexes[1]+size:]
+		} else {
+			remaining = remaining[indexes[1]:]
+		}
+	}
+
+	return b.String()
+}
+
+// FindStringSubmatchIndex returns a slice holding the index pairs identifying
+// the leftmost match of the regexp in s and the matches of its subexpressions.
+func (re *PCREgexp) FindStringSubmatchIndex(s string) []int {
+	return re.match(stringToBytesUnsafe(s))
+}
+
+// FindAllStringSubmatchIndex returns a slice of slices holding the index pairs
+// identifying the successive matches of the regexp in s and their
+// subexpressions.
+func (re *PCREgexp) FindAllStringSubmatchIndex(s string, n int) [][]int {
+	if n == 0 {
+		return nil
+	}
+
+	var results [][]int
+	remaining := s
+	offset := 0
+
+	for n != 0 {
+		indexes := re.match(stringToBytesUnsafe(remaining))
+		if indexes == nil || len(indexes) < 2 {
+			break
+		}
+
+		// Adjust indexes for the offset
+		adjIndexes := make([]int, len(indexes))
+		for i := 0; i < len(indexes); i++ {
+			if indexes[i] >= 0 {
+				adjIndexes[i] = indexes[i] + offset
+			} else {
+				adjIndexes[i] = indexes[i]
+			}
+		}
+		results = append(results, adjIndexes)
+
+		if indexes[0] == indexes[1] {
+			if indexes[1] >= len(remaining) {
+				break
+			}
+			_, size := utf8.DecodeRuneInString(remaining[indexes[1]:])
+			remaining = remaining[indexes[1]+size:]
+			offset += indexes[1] + size
+		} else {
+			remaining = remaining[indexes[1]:]
+			offset += indexes[1]
+		}
+
+		n--
+	}
+
+	return results
+}
+
+// FindAllSubmatch returns a slice of successive matches of the regexp in b.
+func (re *PCREgexp) FindAllSubmatch(b []byte, n int) [][][]byte {
+	if n == 0 {
+		return nil
+	}
+
+	var results [][][]byte
+	remaining := b
+
+	for n != 0 {
+		match := re.FindSubmatch(remaining)
+		if match == nil {
+			break
+		}
+		results = append(results, match)
+
+		if len(match[0]) == 0 {
+			if len(remaining) == 0 {
+				break
+			}
+			_, size := utf8.DecodeRune(remaining)
+			remaining = remaining[size:]
+		} else {
+			remaining = remaining[len(match[0]):]
+		}
+
+		n--
+	}
+
+	return results
+}
+
+// FindAllSubmatchIndex returns a slice of successive matches indexes of the
+// regexp in b.
+func (re *PCREgexp) FindAllSubmatchIndex(b []byte, n int) [][]int {
+	if n == 0 {
+		return nil
+	}
+
+	var results [][]int
+	remaining := b
+	offset := 0
+
+	for n != 0 {
+		indexes := re.match(remaining)
+		if indexes == nil || len(indexes) < 2 {
+			break
+		}
+
+		// Adjust indexes for the offset
+		adjIndexes := make([]int, len(indexes))
+		for i := 0; i < len(indexes); i++ {
+			if indexes[i] >= 0 {
+				adjIndexes[i] = indexes[i] + offset
+			} else {
+				adjIndexes[i] = indexes[i]
+			}
+		}
+		results = append(results, adjIndexes)
+
+		if indexes[0] == indexes[1] {
+			if indexes[1] >= len(remaining) {
+				break
+			}
+			_, size := utf8.DecodeRune(remaining[indexes[1]:])
+			remaining = remaining[indexes[1]+size:]
+			offset += indexes[1] + size
+		} else {
+			remaining = remaining[indexes[1]:]
+			offset += indexes[1]
+		}
+
+		n--
+	}
+
+	return results
+}
+
+// Expand appends template to dst and returns the result; during the
+// append, Expand replaces variables in the template with corresponding
+// matches drawn from src.
+func (re *PCREgexp) Expand(dst, template, src []byte, match []int) []byte {
+	return re.expand(dst, string(template), src, match, false)
+}
+
+// ExpandString is like Expand but the template and source are strings.
+func (re *PCREgexp) ExpandString(dst []byte, template, src string, match []int) []byte {
+	return re.expand(dst, template, stringToBytesUnsafe(src), match, true)
+}
+
+// expand implements both Expand and ExpandString.
+func (re *PCREgexp) expand(dst []byte, template string, src []byte, match []int, isString bool) []byte {
+	for i := 0; i < len(template); i++ {
+		if template[i] == '$' && i+1 < len(template) {
+			switch template[i+1] {
+			case '$':
+				dst = append(dst, '$')
+				i++
+				continue
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				group := 0
+				i++
+				for i < len(template) && template[i] >= '0' && template[i] <= '9' {
+					group = group*10 + int(template[i]-'0')
+					i++
+				}
+				i--
+				if 2*group < len(match) {
+					dst = append(dst, src[match[2*group]:match[2*group+1]]...)
+				}
+				continue
+			}
+		}
+		dst = append(dst, template[i])
+	}
+	return dst
+}
+
+// LiteralPrefix returns a literal string that must begin any match of the
+// regular expression. It also returns a boolean indicating whether the literal
+// is the entire regular expression.
+//
+// TODO(dwisiswant0): Implement this method.
+func (re *PCREgexp) LiteralPrefix() (prefix string, complete bool) {
+	// This would require PCRE2_INFO_PREFIX and PCRE2_INFO_PREFIXLENGTH
+	// TODO(dwisiswant0): Implement using PCRE2 pattern info functions
+	return "", false
+}
+
+// Longest makes future searches prefer the longest match.
+// For PCRE2, this would require changing match flags, but since
+// we're using a basic match function, this is currently a no-op.
+//
+// TODO(dwisiswant0): Implement this method.
+func (re *PCREgexp) Longest() {
+	// No-op for now
+	// TODO(dwisiswant0): Implement using PCRE2 match options
+}
+
+// MarshalText implements the encoding.TextMarshaler interface.
+func (re *PCREgexp) MarshalText() ([]byte, error) {
+	return stringToBytesUnsafe(re.String()), nil
+}
+
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+func (re *PCREgexp) UnmarshalText(text []byte) error {
+	r, err := Compile(string(text))
+	if err != nil {
+		return err
+	}
+	*re = *r
+	return nil
+}
+
+// SubexpNames returns the names of the parenthesized subexpressions
+// in this regexp. The name for the first sub-expression is at index 1,
+// following the same convention as index in FindSubmatch.
+//
+// TODO(dwisiswant0): Implement this method.
+func (re *PCREgexp) SubexpNames() []string {
+	// TODO(dwisiswant0): Implement using PCRE2_INFO_NAMECOUNT and
+	// PCRE2_INFO_NAMETABLE
+	return nil
+}
+
+// SubexpIndex returns the index of the first subexpression with the given name,
+// or -1 if there is no subexpression with that name.
+//
+// TODO(dwisiswant0): Implement this method.
+func (re *PCREgexp) SubexpIndex(name string) int {
+	// TODO(dwisiswant0): Implement using PCRE2_INFO_NAMECOUNT and
+	// PCRE2_INFO_NAMETABLE
+	return -1
 }

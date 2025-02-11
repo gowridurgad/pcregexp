@@ -3,6 +3,7 @@ package pcregexp_test
 import (
 	"bytes"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/dwisiswant0/pcregexp"
@@ -282,6 +283,35 @@ func TestRegexp_FindAll(t *testing.T) {
 			t.Errorf("FindAllStringIndex(%q, -1) = %v, want %v", input, got, want)
 		}
 	})
+
+	t.Run("FindAll", func(t *testing.T) {
+		tests := []struct {
+			input []byte
+			n     int
+			want  [][]byte
+		}{
+			{[]byte("peach punch pinch"), -1, [][]byte{[]byte("peach"), []byte("punch"), []byte("pinch")}},
+			{[]byte("peach punch pinch"), 2, [][]byte{[]byte("peach"), []byte("punch")}},
+			{[]byte("no matches"), -1, nil},
+		}
+
+		for _, tt := range tests {
+			got := re.FindAll(tt.input, tt.n)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("FindAll(%q, %d) = %v, want %v", tt.input, tt.n, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("FindAllIndex", func(t *testing.T) {
+		input := []byte("peach punch")
+		want := [][]int{{0, 5}, {6, 11}}
+		got := re.FindAllIndex(input, -1)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("FindAllIndex(%q, -1) = %v, want %v", input, got, want)
+		}
+	})
 }
 
 func TestRegexp_ReplaceAll(t *testing.T) {
@@ -313,6 +343,39 @@ func TestRegexp_ReplaceAll(t *testing.T) {
 
 		if !bytes.Equal(got, want) {
 			t.Errorf("ReplaceAllFunc(%q, bytes.ToUpper) = %q, want %q", input, got, want)
+		}
+	})
+}
+
+func TestRegexp_ReplaceAllVariants(t *testing.T) {
+	re := pcregexp.MustCompile(`a([a-z])e`)
+	defer re.Close()
+
+	t.Run("ReplaceAllLiteral", func(t *testing.T) {
+		tests := []struct {
+			src  []byte
+			repl []byte
+			want []byte
+		}{
+			{[]byte("age ace"), []byte("X"), []byte("X X")},
+			{[]byte("no match"), []byte("X"), []byte("no match")},
+		}
+
+		for _, tt := range tests {
+			got := re.ReplaceAllLiteral(tt.src, tt.repl)
+			if !bytes.Equal(got, tt.want) {
+				t.Errorf("ReplaceAllLiteral(%q, %q) = %q, want %q", tt.src, tt.repl, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("ReplaceAllStringFunc", func(t *testing.T) {
+		input := "age ace"
+		want := "AGE ACE"
+		got := re.ReplaceAllStringFunc(input, strings.ToUpper)
+
+		if got != want {
+			t.Errorf("ReplaceAllStringFunc(%q, strings.ToUpper) = %q, want %q", input, got, want)
 		}
 	})
 }
@@ -357,4 +420,93 @@ func TestRegexp_Utility(t *testing.T) {
 	// 		t.Errorf("NumSubexp() = %d, want %d", got, want)
 	// 	}
 	// })
+}
+
+func TestRegexp_FindAllSubmatch(t *testing.T) {
+	re := pcregexp.MustCompile(`p([a-z]+)ch`)
+	defer re.Close()
+
+	t.Run("FindAllSubmatch", func(t *testing.T) {
+		input := []byte("peach punch pinch")
+		want := [][][]byte{
+			{[]byte("peach"), []byte("ea")},
+			{[]byte("punch"), []byte("un")},
+			{[]byte("pinch"), []byte("in")},
+		}
+		got := re.FindAllSubmatch(input, -1)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("FindAllSubmatch(%q, -1) = %v, want %v", input, got, want)
+		}
+	})
+}
+
+func TestRegexp_Expand(t *testing.T) {
+	re := pcregexp.MustCompile(`p([a-z]+)ch`)
+	defer re.Close()
+
+	t.Run("Expand", func(t *testing.T) {
+		src := []byte("peach")
+		template := []byte("$1")
+		match := re.FindSubmatchIndex(src)
+		got := re.Expand(nil, template, src, match)
+		want := []byte("ea")
+
+		if !bytes.Equal(got, want) {
+			t.Errorf("Expand() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("ExpandString", func(t *testing.T) {
+		src := "peach"
+		template := "$1"
+		match := re.FindStringSubmatchIndex(src)
+		got := re.ExpandString(nil, template, src, match)
+		want := []byte("ea")
+
+		if !bytes.Equal(got, want) {
+			t.Errorf("ExpandString() = %q, want %q", got, want)
+		}
+	})
+}
+
+func TestRegexp_Marshal(t *testing.T) {
+	pattern := `p([a-z]+)ch`
+	re := pcregexp.MustCompile(pattern)
+	defer re.Close()
+
+	t.Run("MarshalText", func(t *testing.T) {
+		got, err := re.MarshalText()
+		if err != nil {
+			t.Errorf("MarshalText() error = %v", err)
+			return
+		}
+		if string(got) != pattern {
+			t.Errorf("MarshalText() = %q, want %q", got, pattern)
+		}
+	})
+
+	t.Run("UnmarshalText", func(t *testing.T) {
+		var newRe pcregexp.PCREgexp
+		err := newRe.UnmarshalText([]byte(pattern))
+		if err != nil {
+			t.Errorf("UnmarshalText() error = %v", err)
+			return
+		}
+		defer newRe.Close()
+
+		if newRe.String() != pattern {
+			t.Errorf("After UnmarshalText(), String() = %q, want %q", newRe.String(), pattern)
+		}
+	})
+}
+
+func TestRegexp_LiteralPrefix(t *testing.T) {
+	re := pcregexp.MustCompile(`p([a-z]+)ch`)
+	defer re.Close()
+
+	prefix, complete := re.LiteralPrefix()
+	if prefix != "" || complete {
+		t.Errorf("LiteralPrefix() = %q, %v, want %q, false", prefix, complete, "")
+	}
 }
