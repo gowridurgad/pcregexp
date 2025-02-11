@@ -1,5 +1,8 @@
 # pcregexp
 
+[![Tests](https://github.com/dwisiswant0/pcregexp/actions/workflows/tests.yaml/badge.svg)](https://github.com/dwisiswant0/pcregexp/actions/workflows/tests.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/dwisiswant0/pcregexp.svg)](https://pkg.go.dev/github.com/dwisiswant0/pcregexp)
+
 `pcregexp` is a drop‑in replacement for Go's standard [`regexp`](https://pkg.go.dev/regexp) package that uses the full capabilities of [PCRE2](https://github.com/PCRE2Project/pcre2) by loading the shared library dynamically at runtime, which enables cross‑compilation without the need for a C compiler (**no Cgo required!**). The API closely mirrors that of the standard library's `regexp` package while supporting advanced regex features like lookarounds and backreferences that PCRE2 provides.
 
 > [!WARNING]
@@ -56,22 +59,10 @@ func main() {
 
 ## Benchmark
 
-```console
-$ go test -run - -bench=. -benchmem
-goos: linux
-goarch: amd64
-pkg: github.com/dwisiswant0/pcregexp
-cpu: 11th Gen Intel(R) Core(TM) i9-11900H @ 2.50GHz
-BenchmarkCompile/impl=pcregexp-16         	  816678	      1530 ns/op	     728 B/op	      13 allocs/op
-BenchmarkCompile/impl=stdlib-16           	  534636	      2201 ns/op	    3272 B/op	      33 allocs/op
-BenchmarkMatchString/impl=pcregexp-16     	  979143	      1070 ns/op	     736 B/op	      15 allocs/op
-BenchmarkMatchString/impl=stdlib-16       	10747933	       150.1 ns/op	       0 B/op	       0 allocs/op
-BenchmarkFindString/impl=pcregexp-16      	 1128944	      1168 ns/op	     736 B/op	      15 allocs/op
-BenchmarkFindString/impl=stdlib-16        	10892875	       171.6 ns/op	       0 B/op	       0 allocs/op
-BenchmarkReplaceAllString/impl=pcregexp-16         	  310188	      3455 ns/op	    2232 B/op	      46 allocs/op
-BenchmarkReplaceAllString/impl=stdlib-16           	 1949434	       658.9 ns/op	      96 B/op	       5 allocs/op
-PASS
-ok  	github.com/dwisiswant0/pcregexp	13.346s
+Execute the performance benchmark by running:
+
+```bash
+make bench
 ```
 
 ## TODO
@@ -80,6 +71,7 @@ ok  	github.com/dwisiswant0/pcregexp	13.346s
   * Use native PCRE2 API JIT functions for improved performance
   * Add JIT compilation options and configurations
   * Implement memory management for JIT-compiled patterns
+* [ ] Update `(*PCREgexp).NumSubexp` method to correctly return the number of subexpressions.
 
 ## Status
 
