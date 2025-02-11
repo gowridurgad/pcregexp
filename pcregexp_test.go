@@ -510,3 +510,48 @@ func TestRegexp_LiteralPrefix(t *testing.T) {
 		t.Errorf("LiteralPrefix() = %q, %v, want %q, false", prefix, complete, "")
 	}
 }
+
+func TestRegexp_RuneReaderMethods(t *testing.T) {
+	re := pcregexp.MustCompile(`p([a-z]+)ch`)
+	defer re.Close()
+
+	t.Run("MatchReader", func(t *testing.T) {
+		tests := []struct {
+			input string
+			want  bool
+		}{
+			{"peach", true},
+			{"punch", true},
+			{"pch", false},
+		}
+
+		for _, tt := range tests {
+			reader := strings.NewReader(tt.input)
+			if got := re.MatchReader(reader); got != tt.want {
+				t.Errorf("MatchReader(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		}
+	})
+
+	t.Run("FindReaderIndex", func(t *testing.T) {
+		input := "peach punch"
+		want := []int{0, 5}
+		reader := strings.NewReader(input)
+		got := re.FindReaderIndex(reader)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("FindReaderIndex(%q) = %v, want %v", input, got, want)
+		}
+	})
+
+	t.Run("FindReaderSubmatchIndex", func(t *testing.T) {
+		input := "peach"
+		want := []int{0, 5, 1, 3} // Full match + submatch indices
+		reader := strings.NewReader(input)
+		got := re.FindReaderSubmatchIndex(reader)
+
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("FindReaderSubmatchIndex(%q) = %v, want %v", input, got, want)
+		}
+	})
+}

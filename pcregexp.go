@@ -1,7 +1,9 @@
 package pcregexp
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"reflect"
 	"runtime"
 	"strings"
@@ -298,6 +300,66 @@ func (re *PCREgexp) FindSubmatch(b []byte) [][]byte {
 // leftmost match and the matches of any subexpressions.
 func (re *PCREgexp) FindSubmatchIndex(b []byte) []int {
 	return re.match(b)
+}
+
+// FindReaderIndex returns a two-element slice of integers defining the location
+// of the leftmost match in text read from the RuneReader. A return value of nil
+// indicates no match.
+func (re *PCREgexp) FindReaderIndex(r io.RuneReader) []int {
+	var buf bytes.Buffer
+	for {
+		rune, _, err := r.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil
+		}
+		buf.WriteRune(rune)
+	}
+
+	// Get the match indices and return only the first pair
+	if indexes := re.FindIndex(buf.Bytes()); len(indexes) >= 2 {
+		return indexes[:2]
+	}
+	return nil
+}
+
+// FindReaderSubmatchIndex returns a slice holding the index pairs identifying
+// the leftmost match of the regexp in text read from the RuneReader, and the
+// matches of its subexpressions. A return value of nil indicates no match.
+func (re *PCREgexp) FindReaderSubmatchIndex(r io.RuneReader) []int {
+	// Convert RuneReader to []byte for processing
+	var buf bytes.Buffer
+	for {
+		rune, _, err := r.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil
+		}
+		buf.WriteRune(rune)
+	}
+	return re.FindSubmatchIndex(buf.Bytes())
+}
+
+// MatchReader reports whether the regexp matches the text read from the
+// RuneReader.
+func (re *PCREgexp) MatchReader(r io.RuneReader) bool {
+	// Convert RuneReader to []byte for processing
+	var buf bytes.Buffer
+	for {
+		rune, _, err := r.ReadRune()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return false
+		}
+		buf.WriteRune(rune)
+	}
+	return re.Match(buf.Bytes())
 }
 
 // ReplaceAll returns a copy of src, replacing matches of the regexp with repl.

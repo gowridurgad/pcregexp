@@ -2,6 +2,7 @@ package pcregexp_test
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/dwisiswant0/pcregexp"
@@ -288,6 +289,43 @@ func BenchmarkUnmarshal(b *testing.B) {
 		var re regexp.Regexp
 		for i := 0; i < b.N; i++ {
 			re.UnmarshalText(pattern)
+		}
+	})
+}
+
+func BenchmarkRuneReader(b *testing.B) {
+	pattern := `p([a-z]+)ch`
+	text := "peach punch pinch"
+
+	pcre := pcregexp.MustCompile(pattern)
+	defer pcre.Close()
+	re := regexp.MustCompile(pattern)
+
+	b.Run("pcregexp/MatchReader", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reader := strings.NewReader(text)
+			pcre.MatchReader(reader)
+		}
+	})
+
+	b.Run("stdlib/MatchReader", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reader := strings.NewReader(text)
+			re.MatchReader(reader)
+		}
+	})
+
+	b.Run("pcregexp/FindReaderIndex", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reader := strings.NewReader(text)
+			pcre.FindReaderIndex(reader)
+		}
+	})
+
+	b.Run("stdlib/FindReaderIndex", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			reader := strings.NewReader(text)
+			re.FindReaderIndex(reader)
 		}
 	})
 }
