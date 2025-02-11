@@ -2,6 +2,7 @@ package pcregexp
 
 import (
 	"fmt"
+	"reflect"
 	"runtime"
 	"strings"
 	"unicode/utf8"
@@ -47,28 +48,28 @@ func init() {
 }
 
 type PCREgexp struct {
+	pattern   string  // original pattern
+	buf       []int   // cached match offsets
 	code      uintptr // pointer to compiled pcre2_code
-	pattern   string  // original pattern (for debugging)
 	matchData uintptr // cached match data
 }
 
 // Compile compiles the given pattern and returns a [PCREgexp].
 func Compile(pattern string) (*PCREgexp, error) {
-	patBytes := []byte(pattern)
-
 	var patPtr *uint8
-
-	if len(patBytes) == 0 {
-		var dummy byte = 0
-		patPtr = &dummy
-	} else {
-		patPtr = (*uint8)(unsafe.Pointer(&patBytes[0]))
-	}
-
 	var errcode int32
 	var errOffset uint64
 
-	code := pcre2_compile(patPtr, uint64(len(patBytes)), 0, &errcode, &errOffset, 0)
+	if len(pattern) == 0 {
+		var dummy byte = 0
+		patPtr = &dummy
+	} else {
+		strHeader := (*reflect.StringHeader)(unsafe.Pointer(&pattern))
+		patPtr = (*uint8)(unsafe.Pointer(strHeader.Data))
+		// patPtr = (*uint8)(unsafe.StringData(pattern))
+	}
+
+	code := pcre2_compile(patPtr, uint64(len(pattern)), 0, &errcode, &errOffset, 0)
 	if code == 0 {
 		return nil, fmt.Errorf("pcre2_compile failed at offset %d, error code %d", errOffset, errcode)
 	}
@@ -127,7 +128,7 @@ func (re *PCREgexp) match(subject []byte) []int {
 	var subjectPtr *uint8
 
 	if len(subject) > 0 {
-		subjectPtr = (*uint8)(unsafe.Pointer(&subject[0]))
+		subjectPtr = (*uint8)(ptr(&subject[0]))
 	}
 
 	ret := pcre2_match(re.code, subjectPtr, uint64(len(subject)), 0, 0, md, 0)
@@ -136,30 +137,36 @@ func (re *PCREgexp) match(subject []byte) []int {
 	}
 
 	n := int(ret)
+	reqLen := n * 2
+
+	if cap(re.buf) < reqLen {
+		re.buf = make([]int, reqLen)
+	} else {
+		re.buf = re.buf[:reqLen]
+	}
+
 	ovector := pcre2_get_ovector_pointer(md)
 	if ovector == nil {
 		return nil
 	}
 
-	result := make([]int, n*2)
 	size := unsafe.Sizeof(uint64(0))
-
-	for i := 0; i < n*2; i++ {
-		ptr := (*uint64)(unsafe.Pointer(uintptr(unsafe.Pointer(ovector)) + uintptr(i)*size))
-		result[i] = int(*ptr)
+	for i := 0; i < reqLen; i++ {
+		ptr := (*uint64)(ptr(uintptr(ptr(ovector)) + uintptr(i)*size))
+		re.buf[i] = int(*ptr)
 	}
 
-	return result
+	return re.buf
 }
 
 // MatchString reports whether the Regexp matches the given string.
 func (re *PCREgexp) MatchString(s string) bool {
-	return re.match([]byte(s)) != nil
+	return re.match(stringToBytesUnsafe(s)) != nil
 }
 
 // FindString returns the text of the leftmost match in s.
 func (re *PCREgexp) FindString(s string) string {
-	indexes := re.match([]byte(s))
+	indexes := re.match(stringToBytesUnsafe(s))
 	if indexes == nil || len(indexes) < 2 {
 		return ""
 	}
@@ -170,14 +177,14 @@ func (re *PCREgexp) FindString(s string) string {
 // FindStringIndex returns a two-element slice of integers defining the start
 // and end of the leftmost match in s.
 func (re *PCREgexp) FindStringIndex(s string) []int {
-	return re.match([]byte(s))
+	return re.match(stringToBytesUnsafe(s))
 }
 
 // FindStringSubmatch returns a slice holding the text of the leftmost match and
 // its submatches. It uses the actual number of captured groups as returned by
 // PCRE2.
 func (re *PCREgexp) FindStringSubmatch(s string) []string {
-	indexes := re.match([]byte(s))
+	indexes := re.match(stringToBytesUnsafe(s))
 	if indexes == nil || len(indexes) < 2 {
 		return nil
 	}
@@ -213,7 +220,7 @@ func (re *PCREgexp) ReplaceAllString(src, repl string) string {
 
 	remaining := src
 	for {
-		indexes := re.match([]byte(remaining))
+		indexes := re.match(stringToBytesUnsafe(remaining))
 		if indexes == nil || len(indexes) < 2 || indexes[0] < 0 {
 			b.WriteString(remaining)
 			break
@@ -223,14 +230,18 @@ func (re *PCREgexp) ReplaceAllString(src, repl string) string {
 		b.WriteString(repl)
 
 		if indexes[0] == indexes[1] {
-			r, size := utf8.DecodeRuneInString(remaining[indexes[1]:])
-			if r == utf8.RuneError {
-				b.WriteString(remaining[indexes[1]:])
-				break
-			}
+			if indexes[1] < len(remaining) {
+				r, size := utf8.DecodeRuneInString(remaining[indexes[1]:])
+				if r == utf8.RuneError || size == 0 {
+					b.WriteString(remaining[indexes[1]:])
+					break
+				}
 
-			b.WriteString(remaining[indexes[1] : indexes[1]+size])
-			remaining = remaining[indexes[1]+size:]
+				b.WriteString(remaining[indexes[1] : indexes[1]+size])
+				remaining = remaining[indexes[1]+size:]
+			} else {
+				remaining = ""
+			}
 		} else {
 			remaining = remaining[indexes[1]:]
 		}
