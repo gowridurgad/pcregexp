@@ -46,14 +46,14 @@ func init() {
 	}
 }
 
-type Regexp struct {
+type PCREgexp struct {
 	code      uintptr // pointer to compiled pcre2_code
 	pattern   string  // original pattern (for debugging)
 	matchData uintptr // cached match data
 }
 
-// Compile compiles the given pattern and returns a [Regexp].
-func Compile(pattern string) (*Regexp, error) {
+// Compile compiles the given pattern and returns a [PCREgexp].
+func Compile(pattern string) (*PCREgexp, error) {
 	patBytes := []byte(pattern)
 
 	var patPtr *uint8
@@ -73,11 +73,11 @@ func Compile(pattern string) (*Regexp, error) {
 		return nil, fmt.Errorf("pcre2_compile failed at offset %d, error code %d", errOffset, errcode)
 	}
 
-	return &Regexp{code: code, pattern: pattern}, nil
+	return &PCREgexp{code: code, pattern: pattern}, nil
 }
 
 // MustCompile is like Compile but panics on error.
-func MustCompile(pattern string) *Regexp {
+func MustCompile(pattern string) *PCREgexp {
 	re, err := Compile(pattern)
 	if err != nil {
 		panic(err)
@@ -87,7 +87,7 @@ func MustCompile(pattern string) *Regexp {
 }
 
 // Close frees the resources associated with the compiled pattern.
-func (re *Regexp) Close() {
+func (re *PCREgexp) Close() {
 	if re.matchData != 0 {
 		pcre2_match_data_free(re.matchData)
 		re.matchData = 0
@@ -103,7 +103,7 @@ func (re *Regexp) Close() {
 //
 // It returns the pointer to the match data object. The match data object is
 // used to store the results of a match.
-func (re *Regexp) saveMatchData() uintptr {
+func (re *PCREgexp) saveMatchData() uintptr {
 	if re.matchData == 0 {
 		re.matchData = pcre2_match_data_create_from_pattern(re.code, 0)
 	}
@@ -114,7 +114,7 @@ func (re *Regexp) saveMatchData() uintptr {
 // match performs a PCRE2 match on the given subject.
 //
 // It returns a slice of start/end indexes as returned by PCRE2.
-func (re *Regexp) match(subject []byte) []int {
+func (re *PCREgexp) match(subject []byte) []int {
 	if re.code == 0 || len(subject) == 0 {
 		return nil
 	}
@@ -153,12 +153,12 @@ func (re *Regexp) match(subject []byte) []int {
 }
 
 // MatchString reports whether the Regexp matches the given string.
-func (re *Regexp) MatchString(s string) bool {
+func (re *PCREgexp) MatchString(s string) bool {
 	return re.match([]byte(s)) != nil
 }
 
 // FindString returns the text of the leftmost match in s.
-func (re *Regexp) FindString(s string) string {
+func (re *PCREgexp) FindString(s string) string {
 	indexes := re.match([]byte(s))
 	if indexes == nil || len(indexes) < 2 {
 		return ""
@@ -169,14 +169,14 @@ func (re *Regexp) FindString(s string) string {
 
 // FindStringIndex returns a two-element slice of integers defining the start
 // and end of the leftmost match in s.
-func (re *Regexp) FindStringIndex(s string) []int {
+func (re *PCREgexp) FindStringIndex(s string) []int {
 	return re.match([]byte(s))
 }
 
 // FindStringSubmatch returns a slice holding the text of the leftmost match and
 // its submatches. It uses the actual number of captured groups as returned by
 // PCRE2.
-func (re *Regexp) FindStringSubmatch(s string) []string {
+func (re *PCREgexp) FindStringSubmatch(s string) []string {
 	indexes := re.match([]byte(s))
 	if indexes == nil || len(indexes) < 2 {
 		return nil
@@ -198,12 +198,12 @@ func (re *Regexp) FindStringSubmatch(s string) []string {
 	return submatches
 }
 
-// ReplaceAllString returns a copy of src in which all matches of the [Regexp]
+// ReplaceAllString returns a copy of src in which all matches of the [PCREgexp]
 // have been replaced by repl.
 //
 // If an empty match is encountered, it advances one UTF-8 rune to avoid
 // infinite loop.
-func (re *Regexp) ReplaceAllString(src, repl string) string {
+func (re *PCREgexp) ReplaceAllString(src, repl string) string {
 	if src == "" {
 		return ""
 	}
