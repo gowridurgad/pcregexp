@@ -57,6 +57,12 @@ func main() {
 }
 ```
 
+## Wrapped Regexp API
+
+[![Go Reference](https://pkg.go.dev/badge/github.com/dwisiswant0/pcregexp.svg)](https://pkg.go.dev/github.com/dwisiswant0/pcregexp/pkg/regexp)
+
+You may want to use the `regexp` package provided here, which wraps both Go's standard `regexp` package and a PCRE2-based implementation, `pcregexp`. This unified interface automatically selects the appropriate engine based on the regex features used, offering the best of both worlds.
+
 ## Benchmark
 
 Execute the performance benchmark by running:
