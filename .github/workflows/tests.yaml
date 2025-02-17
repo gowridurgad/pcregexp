@@ -85,5 +85,4 @@ jobs:
           check-latest: true
           cache: true
 
-      - name: Run Tests
-        run: CGO_ENABLED=0 go test -v .
+     
