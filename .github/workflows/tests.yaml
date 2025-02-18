@@ -39,25 +39,28 @@ jobs:
         with:
           result-encoding: string
           script: |
-            const tc = require('@actions/tool-cache');
-            const path = require('path');
-            const fs = require('fs');
-            const tarballURL = process.env.TARBALL_URL;
-            core.info(`Downloading PCRE2 tarball from: ${tarballURL}`);
-            const tarPath = await tc.downloadTool(tarballURL);
-            core.info(`Downloaded tarball to: ${tarPath}`);
-            const extractedPath = await tc.extractTar(tarPath);
-            core.info(`Extracted to: ${extractedPath}`);
-            const items = fs.readdirSync(extractedPath);
-            if (items.length !== 1) {
-              throw new Error("Expected exactly one directory inside the tarball");
-            }
-            const folder = items[0];
-            const oldPath = path.join(extractedPath, folder);
-            const newPath = path.join(extractedPath, "pcre2");
-            fs.renameSync(oldPath, newPath);
-            core.info(`Renamed folder to: ${newPath}`);
-            return newPath;
+             const tc = require('@actions/tool-cache');
+             const path = require('path');
+             const fs = require('fs');
+             const tarballURL = process.env.TARBALL_URL;
+             core.info(`Downloading PCRE2 tarball from: ${tarballURL}`);
+             const tarPath = await tc.downloadTool(tarballURL);
+             core.info(`Downloaded tarball to: ${tarPath}`);
+             const extractedPath = await tc.extractTar(tarPath);
+             core.info(`Extracted to: ${extractedPath}`);
+             const items = fs.readdirSync(extractedPath);
+             if (items.length === 0) {
+                throw new Error("No directories found inside the tarball");
+             }
+             const folder = items.find(item => fs.lstatSync(path.join(extractedPath, item)).isDirectory());
+             if (!folder) {
+                 throw new Error("No directories found inside the tarball");
+             }
+             const oldPath = path.join(extractedPath, folder);
+             const newPath = path.join(extractedPath, "pcre2");
+             fs.renameSync(oldPath, newPath);
+             core.info(`Renamed folder to: ${newPath}`);
+             return newPath;
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
