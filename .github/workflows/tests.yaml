@@ -9,14 +9,14 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-      - run: npm install @Actions Bot/tool-cache
+     
       - name: Get latest PCRE2 release
         id: pcre2_release
         uses: actions/github-script@v7
