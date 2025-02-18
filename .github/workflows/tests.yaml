@@ -1,12 +1,10 @@
 name: Tests
-
 on:
   push:
     branches: [ master ]
   pull_request:
     branches: [ master ]
   workflow_dispatch: {}
-
 jobs:
   tests:
     strategy:
@@ -14,12 +12,11 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
       - uses: actions/setup-node@v4
         with:
           node-version: '20.x'
-      - run: npm install @actions/tool-cache
-
+      - run: npm install @Actions Bot/tool-cache
       - name: Get latest PCRE2 release
         id: pcre2_release
         uses: actions/github-script@v7
@@ -30,51 +27,40 @@ jobs:
             core.info(`Latest tag: ${res.data.tag_name}`);
             return res.data.tarball_url;
           result-encoding: string
-
       - name: Download & extract PCRE2
         id: download_pcre2
         uses: actions/github-script@v7
         env:
           TARBALL_URL: ${{ steps.pcre2_release.outputs.result }}
         with:
-          result-encoding: string
           script: |
-             const tc = require('@actions/tool-cache');
-             const path = require('path');
-             const fs = require('fs');
-             const tarballURL = process.env.TARBALL_URL;
-             core.info(`Downloading PCRE2 tarball from: ${tarballURL}`);
-             const tarPath = await tc.downloadTool(tarballURL);
-             core.info(`Downloaded tarball to: ${tarPath}`);
-             const extractedPath = await tc.extractTar(tarPath);
-             core.info(`Extracted to: ${extractedPath}`);
-             const items = fs.readdirSync(extractedPath);
-             if (items.length === 0) {
-                throw new Error("No directories found inside the tarball");
-             }
-             const folder = items.find(item => fs.lstatSync(path.join(extractedPath, item)).isDirectory());
-             if (!folder) {
-                 throw new Error("No directories found inside the tarball");
-             }
-             const oldPath = path.join(extractedPath, folder);
-             const newPath = path.join(extractedPath, "pcre2");
-             fs.renameSync(oldPath, newPath);
-             core.info(`Renamed folder to: ${newPath}`);
-             return newPath;
+            const tc = require('@actions/tool-cache');
+            const path = require('path');
+            const fs = require('fs');
+            const tarballURL = process.env.TARBALL_URL;
+            core.info(`Downloading PCRE2 tarball from: ${tarballURL}`);
+            const tarPath = await tc.downloadTool(tarballURL);
+            core.info(`Downloaded tarball to: ${tarPath}`);
+            const extractedPath = await tc.extractTar(tarPath);
+            core.info(`Extracted to: ${extractedPath}`);
+            const items = fs.readdirSync(extractedPath);
+            if (items.length !== 1) {
+              throw new Error("Expected exactly one directory inside the tarball");
+            }
+            const folder = items[0];
+            const oldPath = path.join(extractedPath, folder);
+            const newPath = path.join(extractedPath, "pcre2");
+            fs.renameSync(oldPath, newPath);
+            core.info(`Renamed folder to: ${newPath}`);
+            core.setOutput('path', newPath);
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
-        working-directory: ${{ steps.download_pcre2.outputs.result }}
         run: |
           cmake -B build .
           cmake --build build/
-          if [[ $RUNNER_OS == 'Linux' ]]; then
-            echo "LD_LIBRARY_PATH=$PCRE2_PATH/build:$LD_LIBRARY_PATH" >> $GITHUB_ENV
-          elif [[ $RUNNER_OS == 'macOS' ]]; then
-            echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
-          fi
+          echo "LD_LIBRARY_PATH=$(pwd)/build:$LD_LIBRARY_PATH" >> $GITHUB_ENV
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
-        working-directory: ${{ steps.download_pcre2.outputs.result }}
         shell: pwsh
         run: |
           Set-StrictMode -Version Latest
@@ -82,10 +68,18 @@ jobs:
           cmake --build build/
           $env:PATH = "$(Get-Location)\build;" + $env:PATH
           Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+      - name: Ensure PowerShell is in PATH
+        if: runner.os == 'Windows'
+        run: |
+          echo "PATH=$env:SystemRoot\System32\WindowsPowerShell\v1.0;$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
       - uses: actions/setup-go@v5
         with:
-          go-version-file: 'go.mod'
+          go-version: '1.18'
           check-latest: true
           cache: true
 
-     
+
+
+
+
+
