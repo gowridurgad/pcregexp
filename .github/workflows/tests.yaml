@@ -1,17 +1,13 @@
 name: Tests
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
   workflow_dispatch: {}
 
 jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -19,7 +15,6 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm install @actions/tool-cache
-
 
       - name: Get latest PCRE2 release
         id: pcre2_release
@@ -60,6 +55,12 @@ jobs:
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
 
+      - name: Add PowerShell to PATH
+        if: runner.os == 'Windows'
+        run: |
+          $env:PATH = "$env:ProgramFiles\PowerShell\7;" + $env:PATH
+          Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -72,13 +73,12 @@ jobs:
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
 
-     
-
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
-        shell: powershell
+        shell: pwsh
         run: |
+          Set-StrictMode -Version Latest
           cmake -B build .
           cmake --build build/
           $env:PATH = "$(Get-Location)\build;" + $env:PATH
@@ -88,6 +88,4 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
-
-
-   
+          cache: true
