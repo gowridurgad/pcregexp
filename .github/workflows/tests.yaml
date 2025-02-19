@@ -58,7 +58,6 @@ jobs:
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
-
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -70,21 +69,20 @@ jobs:
           elif [[ $RUNNER_OS == 'macOS' ]]; then
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
-
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
-        shell: cmd
+        shell: pwsh
         run: |
+          Set-StrictMode -Version Latest
           cmake -B build .
           cmake --build build/
-          set PATH=%cd%\build;%PATH%
-          echo PATH=%cd%\build;%PATH% >> %GITHUB_ENV%
-
-      - name: Ensure PowerShell is in PATH
-        if: runner.os == 'Windows'
-        run: |
-          echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
+          $env:PATH = "$(Get-Location)\build;" + $env:PATH
+          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+      - name: Ensure PowerShell is in PATH	
+	     if: runner.os == 'Windows'
+	     run: |
+	          echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
 
       - uses: actions/setup-go@v5
         with:
