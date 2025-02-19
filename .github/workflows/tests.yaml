@@ -80,10 +80,10 @@ jobs:
           $env:PATH = "$(Get-Location)\build;" + $env:PATH
           Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
 	  
-      - name: Ensure PowerShell is in PATH	
+      - name: Ensure PowerShell is in PATH
         if: runner.os == 'Windows'
-	run: |
-             echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
+        run: |
+          echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
 
       - uses: actions/setup-go@v5
         with:
