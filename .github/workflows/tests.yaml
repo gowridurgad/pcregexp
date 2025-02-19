@@ -85,7 +85,7 @@ jobs:
       - name: Ensure PowerShell is in PATH
         if: runner.os == 'Windows'
         run: |
-          echo "C:\Windows\System32\WindowsPowerShell\v1.0" >> $GITHUB_ENV
+          echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
 
       - uses: actions/setup-go@v5
         with:
