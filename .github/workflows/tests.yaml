@@ -11,7 +11,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -57,7 +57,7 @@ jobs:
             const newPath = path.join(extractedPath, "pcre2");
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
-            return newPath
+            return newPath;
 
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -74,38 +74,20 @@ jobs:
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
-        shell: pwsh
+        shell: cmd
         run: |
-          Set-StrictMode -Version Latest
           cmake -B build .
           cmake --build build/
-          $env:PATH = "$(Get-Location)\build;" + $env:PATH
-          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          set PATH=%cd%\build;%PATH%
+          echo PATH=%cd%\build;%PATH% >> %GITHUB_ENV%
+
       - name: Ensure PowerShell is in PATH
         if: runner.os == 'Windows'
         run: |
-          # Ensure pwsh or powershell is in PATH
-          if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
-            Write-Host "PowerShell Core (pwsh) not found, checking for legacy PowerShell"
-            if (-not (Get-Command powershell -ErrorAction SilentlyContinue)) {
-              Write-Host "Legacy PowerShell (powershell.exe) not found either."
-              exit 1
-            }
-            else {
-              Write-Host "Using legacy PowerShell (powershell.exe)"
-            }
-          }
-          else {
-            Write-Host "Using PowerShell Core (pwsh)"
-          }
-          # Add PowerShell to the PATH
-          echo "Adding PowerShell to PATH"
-          $env:PATH = "C:\Program"
-
-
-    
+          echo "C:\Windows\System32\WindowsPowerShell\v1.0" >> $GITHUB_ENV
 
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.18.10'  # specify the Go version explicitly
-          cache: true
+          go-version-file: 'go.mod'
+          check-latest: true
+         
