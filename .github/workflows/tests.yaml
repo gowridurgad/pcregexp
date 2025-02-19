@@ -20,6 +20,13 @@ jobs:
           node-version: '20.x'
       - run: npm install @actions/tool-cache
 
+      - name: Check PowerShell version and PATH
+        if: runner.os == 'Windows'
+        run: |
+          echo $env:PATH
+          $PSVersionTable.PSVersion
+        shell: pwsh
+
       - name: Get latest PCRE2 release
         id: pcre2_release
         uses: actions/github-script@v7
@@ -92,5 +99,6 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
+
 
    
