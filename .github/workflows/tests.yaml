@@ -81,11 +81,32 @@ jobs:
           cmake --build build/
           $env:PATH = "$(Get-Location)\build;" + $env:PATH
           Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-
-      - name: Check PowerShell Availability
+      - name: Ensure PowerShell is in PATH
+        if: runner.os == 'Windows'
         run: |
-          echo $env:PATH
-          Get-Command pwsh
+          # Ensure pwsh or powershell is in PATH
+          if (-not (Get-Command pwsh -ErrorAction SilentlyContinue)) {
+            Write-Host "PowerShell Core (pwsh) not found, checking for legacy PowerShell"
+            if (-not (Get-Command powershell -ErrorAction SilentlyContinue)) {
+              Write-Host "Legacy PowerShell (powershell.exe) not found either."
+              exit 1
+            }
+            else {
+              Write-Host "Using legacy PowerShell (powershell.exe)"
+            }
+          }
+          else {
+            Write-Host "Using PowerShell Core (pwsh)"
+          }
+          # Add PowerShell to the PATH
+          echo "Adding PowerShell to PATH"
+          $env:PATH = "C:\Program
+
+
+
+Continue generating
+
+    
 
       - uses: actions/setup-go@v5
         with:
