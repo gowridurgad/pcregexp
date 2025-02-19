@@ -72,16 +72,12 @@ jobs:
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
 
-      - name: Ensure PowerShell is in PATH
-        if: runner.os == 'Windows'
-        run: |
-          echo "C:\Program Files\PowerShell\7" >> $GITHUB_ENV
-          echo "PATH=$env:PATH;C:\Program Files\PowerShell\7" >> $env:GITHUB_ENV
+     
 
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
-        shell: pwsh
+        shell: powershell
         run: |
           cmake -B build .
           cmake --build build/
