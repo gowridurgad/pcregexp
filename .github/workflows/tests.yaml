@@ -100,7 +100,7 @@ jobs:
           }
           # Add PowerShell to the PATH
           echo "Adding PowerShell to PATH"
-          $env:PATH = "C:\Program
+          $env:PATH = "C:\Program"
 
 
     
