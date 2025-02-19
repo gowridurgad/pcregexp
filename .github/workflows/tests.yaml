@@ -85,7 +85,7 @@ jobs:
       - name: Check PowerShell Availability
         run: |
           echo $env:PATH
-          Get-Command powershell
+          Get-Command pwsh
 
       - uses: actions/setup-go@v5
         with:
