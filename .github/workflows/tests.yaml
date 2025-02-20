@@ -55,11 +55,7 @@ jobs:
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
 
-      - name: Add PowerShell to PATH
-        if: runner.os == 'Windows'
-        run: |
-          $env:PATH = "$env:ProgramFiles\PowerShell\7;" + $env:PATH
-          Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+
 
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
@@ -81,8 +77,12 @@ jobs:
           Set-StrictMode -Version Latest
           cmake -B build .
           cmake --build build/
-          $env:PATH = "$(Get-Location)\build;" + $env:PATH
-          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          $buildPath = "$(Get-Location)\build"
+          Write-Output "Adding $buildPath to PATH"
+          $env:PATH = $buildPath + ";" + $env:PATH
+          Write-Output "Updated PATH: $env:PATH"
+          Write-Output "PATH=$buildPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+         
 
       - uses: actions/setup-go@v5
         with:
