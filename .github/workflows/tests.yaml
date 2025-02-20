@@ -69,20 +69,6 @@ jobs:
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
 
-      - name: Build PCRE2 on Windows
-        if: runner.os == 'Windows'
-        working-directory: ${{ steps.download_pcre2.outputs.result }}
-        shell: pwsh
-        run: |
-          Set-StrictMode -Version Latest
-          cmake -B build .
-          cmake --build build/
-          $buildPath = "$(Get-Location)\build"
-          Write-Output "Adding $buildPath to PATH"
-          $env:PATH = $buildPath + ";" + $env:PATH
-          Write-Output "Updated PATH: $env:PATH"
-          Write-Output "PATH=$buildPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-         
 
       - uses: actions/setup-go@v5
         with:
