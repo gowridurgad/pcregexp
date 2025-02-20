@@ -1,13 +1,17 @@
 name: Tests
 
 on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
   workflow_dispatch: {}
 
 jobs:
   tests:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -54,9 +58,6 @@ jobs:
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
-
-
-
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -68,8 +69,23 @@ jobs:
           elif [[ $RUNNER_OS == 'macOS' ]]; then
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
+      - name: Build PCRE2 on Windows
+        if: runner.os == 'Windows'
+        working-directory: ${{ steps.download_pcre2.outputs.result }}
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          cmake -B build .
+          cmake --build build/
+          $env:PATH = "$(Get-Location)\build;" + $env:PATH
+          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          echo "PATH=$env:PATH"  # Debug: Output the updated PATH
 
-
+      - name: Add PowerShell to PATH
+        if: runner.os == 'Windows'
+        run: |
+           $env:PATH = "$env:ProgramFiles\PowerShell\7;" + $env:PATH
+           Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
