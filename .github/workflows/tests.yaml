@@ -11,7 +11,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -19,15 +19,6 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm install @actions/tool-cache
-      - name: Print PowerShell Path
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-           # Print the PATH to check if PowerShell is in it
-           Write-Output "Checking PATH:"
-           Write-Output $env:PATH
-           # Print PowerShell path
-           Get-Command pwsh | Select-Object -ExpandProperty Path
 
       - name: Get latest PCRE2 release
         id: pcre2_release
@@ -67,16 +58,6 @@ jobs:
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
-      - name: Print PowerShell Path
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-           # Print the PATH to check if PowerShell is in it
-           Write-Output "Checking PATH:"
-           Write-Output $env:PATH
-           # Print PowerShell path
-           Get-Command pwsh | Select-Object -ExpandProperty Path
-      
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -88,15 +69,6 @@ jobs:
           elif [[ $RUNNER_OS == 'macOS' ]]; then
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
-      - name: Print PowerShell Path
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-           # Print the PATH to check if PowerShell is in it
-           Write-Output "Checking PATH:"
-           Write-Output $env:PATH
-           # Print PowerShell path
-           Get-Command pwsh | Select-Object -ExpandProperty Path
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -106,16 +78,7 @@ jobs:
           cmake -B build .
           cmake --build build/
           $env:PATH = "$(Get-Location)\build;" + $env:PATH
-          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-      - name: Print PowerShell Path
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-           # Print the PATH to check if PowerShell is in it
-           Write-Output "Checking PATH:"
-           Write-Output $env:PATH
-           # Print PowerShell path
-           Get-Command pwsh | Select-Object -ExpandProperty Path
+          Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
