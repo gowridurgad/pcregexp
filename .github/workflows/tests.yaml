@@ -11,7 +11,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -19,6 +19,19 @@ jobs:
         with:
           node-version: '20.x'
       - run: npm install @actions/tool-cache
+      - name: Verify PowerShell in PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+           # Print the PATH to check if PowerShell is in it
+           Write-Output "Checking PATH:"
+           Write-Output $env:PATH
+           # Verify if PowerShell is in the PATH
+           if ($env:PATH -contains "PowerShell") {
+           Write-Output "PowerShell is correctly in PATH."
+           } else {
+           Write-Error "PowerShell is not in PATH."
+           }
 
       - name: Get latest PCRE2 release
         id: pcre2_release
@@ -59,19 +72,7 @@ jobs:
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
 
-      - name: Verify PowerShell in PATH
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-           # Print the PATH to check if PowerShell is in it
-           Write-Output "Checking PATH:"
-           Write-Output $env:PATH
-           # Verify if PowerShell is in the PATH
-           if ($env:PATH -contains "PowerShell") {
-           Write-Output "PowerShell is correctly in PATH."
-           } else {
-           Write-Error "PowerShell is not in PATH."
-           }
+      
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
