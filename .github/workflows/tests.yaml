@@ -69,30 +69,25 @@ jobs:
           elif [[ $RUNNER_OS == 'macOS' ]]; then
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
+
+    
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
         shell: pwsh
         run: |
-          Set-StrictMode -Version Latest
-          cmake -B build .
-          cmake --build build/
-          $env:PATH = "$(Get-Location)\build;" + $env:PATH
-          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
-          echo "PATH=$env:PATH"  # Debug: Output the updated PATH
+             Set-StrictMode -Version Latest
+             cmake -B build .
+             cmake --build build/
+             $env:PATH = "$(Get-Location)\build;" + $env:PATH
+  
+             if (-not ($env:PATH -contains "PowerShell")) {
+             $env:PATH = "$env:ProgramFiles\PowerShell\7;" + $env:PATH
+             }
+             Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
 
-      # Add a step to verify PowerShell is in the PATH
-      - name: Check if PowerShell is available in PATH
-        if: runner.os == 'Windows'
-        run: |
-          where pwsh  # This will confirm whether PowerShell is available in the PATH
-          echo "PowerShell is in the PATH."  # Debugging output
 
-      # Check and validate if the PATH is correctly set after the PCRE2 build
-      - name: Verify PATH after build on Windows
-        if: runner.os == 'Windows'
-        run: |
-          echo "Updated PATH is: $env:PATH"
+  
 
     
       - uses: actions/setup-go@v5
