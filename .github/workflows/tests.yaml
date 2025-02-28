@@ -58,6 +58,20 @@ jobs:
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
             return newPath;
+
+      - name: Verify PowerShell in PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+           # Print the PATH to check if PowerShell is in it
+           Write-Output "Checking PATH:"
+           Write-Output $env:PATH
+           # Verify if PowerShell is in the PATH
+           if ($env:PATH -contains "PowerShell") {
+           Write-Output "PowerShell is correctly in PATH."
+           } else {
+           Write-Error "PowerShell is not in PATH."
+           }
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
