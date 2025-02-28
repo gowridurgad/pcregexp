@@ -11,7 +11,7 @@ jobs:
   tests:
     strategy:
       matrix:
-        os: [windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -57,7 +57,7 @@ jobs:
             const newPath = path.join(extractedPath, "pcre2");
             fs.renameSync(oldPath, newPath);
             core.info(`Renamed folder to: ${newPath}`);
-            return newPath
+            return newPath;
       - name: Build PCRE2 on Linux/macOS
         if: runner.os == 'Linux' || runner.os == 'macOS'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
@@ -69,28 +69,32 @@ jobs:
           elif [[ $RUNNER_OS == 'macOS' ]]; then
             echo "DYLD_LIBRARY_PATH=$PCRE2_PATH/build:$DYLD_LIBRARY_PATH" >> $GITHUB_ENV
           fi
-
-    
       - name: Build PCRE2 on Windows
         if: runner.os == 'Windows'
         working-directory: ${{ steps.download_pcre2.outputs.result }}
         shell: pwsh
         run: |
-             Set-StrictMode -Version Latest
-             cmake -B build .
-             cmake --build build/
-             $env:PATH = "$(Get-Location)\build;" + $env:PATH
-  
-             if (-not ($env:PATH -contains "PowerShell")) {
-             $env:PATH = "$env:ProgramFiles\PowerShell\7;" + $env:PATH
-             }
-             Write-Output "PATH=$env:PATH" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+          Set-StrictMode -Version Latest
+          cmake -B build .
+          cmake --build build/
+          $env:PATH = "$(Get-Location)\build;" + $env:PATH
+          Write-Output "PATH=$(Get-Location)\build" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8
+      - name: Verify PowerShell in PATH
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+           # Print the PATH to check if PowerShell is in it
+           Write-Output "Checking PATH:"
+           Write-Output $env:PATH
 
-
-  
-
-    
+           # Verify if PowerShell is in the PATH
+           if ($env:PATH -contains "PowerShell") {
+           Write-Output "PowerShell is correctly in PATH."
+           } else {
+           Write-Error "PowerShell is not in PATH."
+           }
       - uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
           check-latest: true
+          cache: true
